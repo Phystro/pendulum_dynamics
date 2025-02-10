@@ -11,9 +11,6 @@ from scipy.integrate import solve_ivp
 from scipy.integrate._ivp.ivp import OdeResult
 
 
-gravity_acc: float = 9.81
-
-
 class Bob:
     def __init__(self, mass: float):
         self.mass = mass
@@ -25,15 +22,20 @@ class Rod:
 
 
 class Pendulum:
-    def __init__(self, bob: Bob, rod: Rod):
+    def __init__(self, bob: Bob, rod: Rod, damping_coeff: float, gravity_acc: float=9.81):
         self.bob = bob
         self.rod = rod
+        self.damping_coeff = damping_coeff
+        self.gravity_acc = gravity_acc
 
 
     def compute_statevector(self, _, state: np.ndarray) -> np.ndarray:
         """Calculate the derivatives of angular position and velocity"""
         theta, omega = state
-        domega_dt: float = -(gravity_acc/self.rod.length) * np.sin(theta)
+        # damping_term = (self.damper.damping_coefficient /
+        #                (self.bob.mass * self.rod.length**2)) * omega
+        damping_factor: float = (self.damping_coeff/self.bob.mass) * omega
+        domega_dt: float = -(self.gravity_acc/self.rod.length) * np.sin(theta) - damping_factor
         return np.array([
             omega,
             domega_dt
@@ -41,12 +43,12 @@ class Pendulum:
 
     def position(self, theta: float) -> tuple[float, float]:
         """Calculate the position of the bob"""
-        return (rod.length*np.sin(theta), -rod.length*np.cos(theta))
+        return (self.rod.length*np.sin(theta), -self.rod.length*np.cos(theta))
 
 
 class Solver:
     """Solves the pendulum's equations of motion using numerical integration"""
-    def __init__(self, pendulum: Pendulum, initial_conditions: np.ndarray, time_span: np.ndarray, time_eval: np.ndarray) -> None:
+    def __init__(self, pendulum: Pendulum, initial_conditions: np.ndarray, time_span: list, time_eval: np.ndarray) -> None:
         self.pendulum = pendulum
         self.initial_conditions = initial_conditions
         self.time_span = time_span
@@ -79,7 +81,7 @@ class PlotDynamics:
 
         # Labels for the plots
         self.theta_label: str = r'$\theta (^\circ)$'
-        self.omega_label: str = r'$\dot \theta (^\circ/s)$'
+        self.omega_label: str = r'$\omega (^\circ/s)$'
 
 
     def plot_position_v_time(self) -> None:
@@ -118,10 +120,11 @@ class PlotDynamics:
         fig = plt.figure(dpi=(1920/16))
         fig.set_size_inches(19.20, 10.80)
         fig.suptitle('Simple Pendulum Dynamics')
-        gs = GridSpec(2, 2, width_ratios=[1, 2], height_ratios=[1, 1])
+        gs = GridSpec(nrows=2, ncols=3, width_ratios=[1, 1, 1], height_ratios=[1, 1])
 
         # position vs. time
-        axes0: Axes = fig.add_subplot(gs[0, 0])
+        # axes0: Axes = fig.add_subplot(gs[0, 0])
+        axes0: Axes = fig.add_subplot(gs[1,:])
         axes0.set_ylabel(self.theta_label)
         axes0.set_xlabel('Time (s)')
         theta_curve: Line2D = axes0.plot(self.t, self.theta, 'b')[0]
@@ -131,7 +134,7 @@ class PlotDynamics:
         axes0.grid()
 
         # phase space
-        axes1: Axes = fig.add_subplot(gs[1, 0])
+        axes1: Axes = fig.add_subplot(gs[0, 0])
         axes1.set_ylabel(self.omega_label)
         axes1.set_xlabel(self.theta_label)
         axes1.set_title('Phase Space Diagram')
@@ -140,7 +143,8 @@ class PlotDynamics:
         phase_dot: Line2D = axes1.plot(self.theta, self.omega, 'ro')[0]
 
         # pendulum animation
-        axes2: Axes = fig.add_subplot(gs[:,1])
+        # axes2: Axes = fig.add_subplot(gs[:,1])
+        axes2: Axes = fig.add_subplot(gs[0, 2])
         axes2.set_xlim(-1, 1)
         axes2.set_ylim(-1.5, 0.5)
         axes2.set_title('Simple Pendulum Animation')
@@ -176,25 +180,43 @@ class PlotDynamics:
 
 
 if __name__ == '__main__':
-    simple_pendulum: Pendulum = Pendulum(
-        rod=Rod(length=1.0),
-        bob=Bob(mass=1.0)
-    )
-
     # initial conditions: initial angular displacement, initial angular velocity
     theta_init: float = np.deg2rad(30)
     omega_init: float = 0.0 # initial angular velocity
     initial_conditions: np.ndarray = np.array([theta_init, omega_init])
 
     # Time range: 0 to 5 seconds with 1000 points
-    time_span: np.ndarray = np.array([0, 10])
-    time_eval: np.ndarray = np.linspace(0, 10, 1024)
+    time_span: list = [0, 10]
+    time_eval: np.ndarray = np.linspace(*time_span, 130)
+
+
+    # Simple undamped pendulum
+    simple_undamped_pendulum: Pendulum = Pendulum(
+        rod=Rod(length=1.0),
+        bob=Bob(mass=1.0),
+        damping_coeff=0.0
+    )
 
     # Create and run solver
-    solver: Solver = Solver(simple_pendulum, initial_conditions, time_span, time_eval)
+    solver: Solver = Solver(simple_undamped_pendulum, initial_conditions, time_span, time_eval)
     solver.solve()
 
     # Generate and display plots
     plotter: PlotDynamics = PlotDynamics(solver)
-    plotter.animated_plots(save_as_gif=False, filename='simple_pendulum.mp4')
+    plotter.animated_plots(save_as_gif=False, filename='simple_undamped_pendulum.mp4')
+
+    # Simple damped pendulum
+    simple_damped_pendulum: Pendulum = Pendulum(
+        rod=Rod(length=1.0),
+        bob=Bob(mass=1.0),
+        damping_coeff=0.5
+    )
+
+    # Create and run solver
+    solver: Solver = Solver(simple_damped_pendulum, initial_conditions, time_span, time_eval)
+    solver.solve()
+
+    # Generate and display plots
+    plotter: PlotDynamics = PlotDynamics(solver)
+    plotter.animated_plots(save_as_gif=False, filename='simple_damped_pendulum.mp4')
 
