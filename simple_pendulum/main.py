@@ -203,7 +203,7 @@ if __name__ == '__main__':
 
     # Generate and display plots
     plotter: PlotDynamics = PlotDynamics(solver)
-    plotter.animated_plots(save_as_gif=False, filename='simple_undamped_pendulum.mp4')
+    plotter.animated_plots(save_as_gif=True, filename='simple_undamped_pendulum.gif')
 
     # Simple damped pendulum
     simple_damped_pendulum: Pendulum = Pendulum(
@@ -218,5 +218,5 @@ if __name__ == '__main__':
 
     # Generate and display plots
     plotter: PlotDynamics = PlotDynamics(solver)
-    plotter.animated_plots(save_as_gif=False, filename='simple_damped_pendulum.mp4')
+    plotter.animated_plots(save_as_gif=True, filename='simple_damped_pendulum.gif')
 

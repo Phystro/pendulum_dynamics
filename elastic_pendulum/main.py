@@ -166,5 +166,5 @@ if __name__ == '__main__':
     solver.solve()
 
     plotter: PlotDynamics = PlotDynamics(solver)
-    plotter.animated_plots('elastic_pendulum.mp4', False)
+    plotter.animated_plots('elastic_pendulum.gif', True)
 
